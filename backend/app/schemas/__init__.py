@@ -35,6 +35,18 @@ class TokenData(BaseModel):
     email: Optional[str] = None
 
 
+# User basic (used as nested in Patient/Appointment responses)
+class UserBasic(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    role: UserRole
+    specialization: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # Patient Schemas
 class PatientBase(BaseModel):
     date_of_birth: Optional[datetime] = None
@@ -65,6 +77,7 @@ class PatientResponse(PatientBase):
     allergies: Optional[List[str]] = None
     current_medications: Optional[List[str]] = None
     created_at: datetime
+    user: Optional[UserBasic] = None
     
     class Config:
         from_attributes = True
@@ -89,17 +102,6 @@ class HealthMetricResponse(HealthMetricCreate):
 
 
 # Appointment Schemas
-class UserBasic(BaseModel):
-    id: int
-    full_name: str
-    email: str
-    role: UserRole
-    specialization: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-
 class PatientBasic(BaseModel):
     id: int
     user_id: int

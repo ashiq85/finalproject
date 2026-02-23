@@ -12,6 +12,7 @@ import Documents from './pages/Documents';
 import Alerts from './pages/Alerts';
 import Reports from './pages/Reports';
 import PatientManagement from './pages/PatientManagement';
+import DoctorManagement from './pages/DoctorManagement';
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,17 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <Layout>
               <Reports />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/doctors"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <DoctorManagement />
             </Layout>
           </ProtectedRoute>
         }

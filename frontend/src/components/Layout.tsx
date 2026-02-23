@@ -9,7 +9,8 @@ import {
     Bell,
     LogOut,
     Heart,
-    Users
+    Users,
+    Stethoscope
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -21,6 +22,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         ...(user?.role === 'admin' || user?.role === 'doctor'
             ? [{ name: 'Patients', href: '/patients', icon: Users }]
+            : []),
+        ...(user?.role === 'admin'
+            ? [{ name: 'Doctors', href: '/doctors', icon: Stethoscope }]
             : []),
         { name: 'Appointments', href: '/appointments', icon: Calendar },
         { name: 'Clinical Support', href: '/clinical-support', icon: Activity },
