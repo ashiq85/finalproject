@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str
     role: UserRole
+    specialization: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -18,6 +19,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: int
     is_active: bool
+    specialization: Optional[str] = None
     created_at: datetime
     
     class Config:
@@ -92,6 +94,7 @@ class UserBasic(BaseModel):
     full_name: str
     email: str
     role: UserRole
+    specialization: Optional[str] = None
 
     class Config:
         from_attributes = True

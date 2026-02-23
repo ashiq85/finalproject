@@ -49,7 +49,8 @@ async def create_doctor(
         full_name=doctor_data.full_name,
         role=UserRole.DOCTOR,
         hashed_password=hashed_password,
-        is_active=True
+        is_active=True,
+        specialization=doctor_data.specialization
     )
     
     db.add(new_doctor)

@@ -11,6 +11,11 @@ export interface User {
     full_name: string;
     role: UserRole;
     is_active: boolean;
+    specialization?: string;
+}
+
+export interface Doctor extends User {
+    specialization?: string;
 }
 
 export interface AuthResponse {

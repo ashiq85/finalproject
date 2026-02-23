@@ -10,6 +10,7 @@ interface Doctor {
     id: number;
     full_name: string;
     email: string;
+    specialization?: string;
 }
 
 const Appointments: React.FC = () => {
@@ -192,7 +193,7 @@ const Appointments: React.FC = () => {
                     <div>
                         <p className="text-xs font-semibold text-primary-700 uppercase">Upcoming</p>
                         <p className="text-2xl font-bold text-gray-900">
-                            {appointments.filter(a => upcomingStatuses.includes(a.status)).length}
+                            {appointments.filter(a => (upcomingStatuses as readonly string[]).includes(a.status as string)).length}
                         </p>
                     </div>
                 </div>
@@ -365,7 +366,9 @@ const Appointments: React.FC = () => {
                                     >
                                         <option value={0} disabled>-- Select a Doctor --</option>
                                         {doctors.map(d => (
-                                            <option key={d.id} value={d.id}>{d.full_name}</option>
+                                            <option key={d.id} value={d.id}>
+                                                {d.full_name}{d.specialization ? ` — ${d.specialization}` : ''}
+                                            </option>
                                         ))}
                                     </select>
                                 )}
