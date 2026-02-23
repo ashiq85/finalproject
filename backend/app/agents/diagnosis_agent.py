@@ -1,4 +1,10 @@
-from crewai import Agent
+try:
+    from crewai import Agent
+    CREWAI_AVAILABLE = True
+except ImportError:
+    CREWAI_AVAILABLE = False
+    Agent = None
+
 from app.agents.tools import search_similar_cases, query_medical_records, create_alert_tool, emergency_detection_tool, query_health_metrics
 from app.core.config import settings
 import logging
@@ -6,19 +12,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Diagnosis Agent
-diagnosis_agent = Agent(
-    role="Clinical Diagnosis Specialist",
-    goal="""Analyze patient symptoms and provide evidence-based diagnosis suggestions.
-    Use vector similarity search to find similar cases and assess risk levels.""",
-    backstory="""You are an expert clinical diagnostician with deep knowledge of medical conditions,
-    symptoms, and differential diagnosis. You use AI-powered similarity search to find relevant 
-    medical cases and provide accurate diagnosis suggestions with confidence scores. You prioritize 
-    patient safety by identifying high-risk conditions early.""",
-    verbose=True,
-    allow_delegation=False,
-    tools=[search_similar_cases, query_medical_records, create_alert_tool, emergency_detection_tool, query_health_metrics]
-)
+# Diagnosis Agent (only created if crewai is available)
+diagnosis_agent = None
+if CREWAI_AVAILABLE and Agent:
+    diagnosis_agent = Agent(
+        role="Clinical Diagnosis Specialist",
+        goal="""Analyze patient symptoms and provide evidence-based diagnosis suggestions.
+        Use vector similarity search to find similar cases and assess risk levels.""",
+        backstory="""You are an expert clinical diagnostician with deep knowledge of medical conditions,
+        symptoms, and differential diagnosis. You use AI-powered similarity search to find relevant 
+        medical cases and provide accurate diagnosis suggestions with confidence scores. You prioritize 
+        patient safety by identifying high-risk conditions early.""",
+        verbose=True,
+        allow_delegation=False,
+        tools=[search_similar_cases, query_medical_records, create_alert_tool, emergency_detection_tool, query_health_metrics]
+    )
 
 
 def analyze_symptoms(patient_id: int, symptoms: list, vitals: dict = None) -> dict:

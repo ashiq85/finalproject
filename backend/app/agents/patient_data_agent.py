@@ -1,4 +1,9 @@
-from crewai import Agent
+try:
+    from crewai import Agent
+    CREWAI_AVAILABLE = True
+except ImportError:
+    Agent = None
+    CREWAI_AVAILABLE = False
 from app.agents.tools import query_patient_db, query_medical_records
 from app.core.config import settings
 import logging
@@ -6,18 +11,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Patient Data Fetch Agent
-patient_data_agent = Agent(
-    role="Patient Data Specialist",
-    goal="""Retrieve and normalize patient medical records, demographics, and health history.
-    Provide comprehensive patient data for clinical decision making.""",
-    backstory="""You are an expert in electronic health records (EHR) management. You specialize 
-    in retrieving patient information from databases, normalizing data formats, and presenting 
-    comprehensive patient profiles. You ensure data accuracy and completeness for healthcare providers.""",
-    verbose=True,
-    allow_delegation=False,
-    tools=[query_patient_db, query_medical_records]
-)
+# Patient Data Agent (only if crewai is available)
+patient_data_agent = None
+if CREWAI_AVAILABLE and Agent:
+    patient_data_agent = Agent(
+        role="Patient Data Specialist",
+        goal="""Retrieve and normalize patient medical records, demographics, and health history.
+        Provide comprehensive patient data for clinical decision making.""",
+        backstory="""You are an expert in electronic health records (EHR) management. You specialize 
+        in retrieving patient information from databases, normalizing data formats, and presenting 
+        comprehensive patient profiles. You ensure data accuracy and completeness for healthcare providers.""",
+        verbose=True,
+        allow_delegation=False,
+        tools=[query_patient_db, query_medical_records]
+    )
 
 
 def fetch_patient_data(patient_id: int, include_records: bool = True) -> dict:

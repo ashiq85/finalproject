@@ -1,4 +1,9 @@
-from crewai import Agent
+try:
+    from crewai import Agent
+    CREWAI_AVAILABLE = True
+except ImportError:
+    Agent = None
+    CREWAI_AVAILABLE = False
 from app.agents.tools import search_similar_cases
 from app.core.config import settings
 import logging
@@ -6,19 +11,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Medical Agent
-medical_agent = Agent(
-    role="Medical Knowledge Specialist",
-    goal="""Provide evidence-based medical recommendations, treatment protocols, and drug information.
-    Search medical literature and check for drug interactions.""",
-    backstory="""You are a medical knowledge expert with comprehensive understanding of treatment 
-    protocols, pharmacology, and evidence-based medicine. You provide accurate medical recommendations
-    based on current medical guidelines and research. You prioritize patient safety by checking for
-    drug interactions and contraindications.""",
-    verbose=True,
-    allow_delegation=False,
-    tools=[search_similar_cases]
-)
+# Medical Agent (only if crewai is available)
+medical_agent = None
+if CREWAI_AVAILABLE and Agent:
+    medical_agent = Agent(
+        role="Medical Knowledge Specialist",
+        goal="""Provide evidence-based medical recommendations, treatment protocols, and drug information.
+        Search medical literature and check for drug interactions.""",
+        backstory="""You are a medical knowledge expert with comprehensive understanding of treatment 
+        protocols, pharmacology, and evidence-based medicine. You provide accurate medical recommendations
+        based on current medical guidelines and research. You prioritize patient safety by checking for
+        drug interactions and contraindications.""",
+        verbose=True,
+        allow_delegation=False,
+        tools=[search_similar_cases]
+    )
 
 
 def get_treatment_recommendations(diagnosis: str, patient_allergies: list = None, current_medications: list = None) -> dict:

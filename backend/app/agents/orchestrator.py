@@ -1,4 +1,9 @@
-from crewai import Agent, Task, Crew
+try:
+    from crewai import Agent, Task, Crew
+    CREWAI_AVAILABLE = True
+except ImportError:
+    Agent = Task = Crew = None
+    CREWAI_AVAILABLE = False
 from app.agents.tools import (
     query_patient_db,
     query_medical_records,
@@ -13,18 +18,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Orchestrator Agent - Central coordinator
-orchestrator_agent = Agent(
-    role="Healthcare Orchestrator",
-    goal="""Coordinate all healthcare tasks by routing requests to appropriate specialized agents.
-    Aggregate responses and provide comprehensive healthcare management.""",
-    backstory="""You are the central AI coordinator for the AgentHealth system. You understand 
-    patient needs and delegate tasks to specialized agents including patient data retrieval, 
-    diagnosis analysis, medical recommendations, appointment scheduling, and emergency detection.
-    You synthesize information from multiple agents to provide complete healthcare solutions.""",
-    verbose=True,
-    allow_delegation=True
-)
+# Orchestrator Agent (only if crewai is available)
+orchestrator_agent = None
+if CREWAI_AVAILABLE and Agent:
+    orchestrator_agent = Agent(
+        role="Healthcare Orchestrator",
+        goal="""Coordinate all healthcare tasks by routing requests to appropriate specialized agents.
+        Aggregate responses and provide comprehensive healthcare management.""",
+        backstory="""You are the central AI coordinator for the AgentHealth system. You understand 
+        patient needs and delegate tasks to specialized agents including patient data retrieval, 
+        diagnosis analysis, medical recommendations, appointment scheduling, and emergency detection.
+        You synthesize information from multiple agents to provide complete healthcare solutions.""",
+        verbose=True,
+        allow_delegation=True
+    )
 
 
 def orchestrate_patient_query(patient_id: int, query_type: str, query_data: dict) -> dict:

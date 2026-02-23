@@ -1,4 +1,14 @@
-from crewai.tools import tool
+try:
+    from crewai.tools import tool
+except ImportError:
+    # Fallback: plain decorator when crewai is not installed
+    def tool(name=None):
+        def decorator(func):
+            return func
+        if callable(name):
+            return name
+        return decorator
+
 from sqlalchemy.orm import Session
 from app.db.base import SessionLocal
 from app.db.models import Patient, User, MedicalRecord, Appointment, Alert, HealthMetric

@@ -9,6 +9,22 @@ from app.core.config import settings
 from app.schemas import Token, UserResponse, UserCreate
 from typing import Optional
 from functools import wraps
+import random
+import string
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _generate_medical_id(db: Session) -> str:
+    """Generate a unique medical ID in the format AH-XXXXX"""
+    while True:
+        digits = ''.join(random.choices(string.digits, k=5))
+        medical_id = f"AH-{digits}"
+        exists = db.query(Patient).filter(Patient.medical_id == medical_id).first()
+        if not exists:
+            return medical_id
+
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -91,10 +107,16 @@ async def signup(
     db.commit()
     db.refresh(new_user)
     
-    # Create patient profile
-    patient_profile = Patient(user_id=new_user.id)
-    db.add(patient_profile)
-    db.commit()
+    # Create patient profile with medical ID
+    try:
+        medical_id = _generate_medical_id(db)
+        patient_profile = Patient(user_id=new_user.id, medical_id=medical_id)
+        db.add(patient_profile)
+        db.commit()
+    except Exception as e:
+        logger.error(f"Error creating patient profile: {e}")
+        # User was created but patient profile failed; still return user
+        db.rollback()
     
     return new_user
 

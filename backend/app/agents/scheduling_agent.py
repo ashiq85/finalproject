@@ -1,4 +1,9 @@
-from crewai import Agent
+try:
+    from crewai import Agent
+    CREWAI_AVAILABLE = True
+except ImportError:
+    Agent = None
+    CREWAI_AVAILABLE = False
 from app.agents.tools import check_doctor_availability
 from app.core.config import settings
 from datetime import datetime, timedelta
@@ -7,19 +12,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Scheduling Agent
-scheduling_agent = Agent(
-    role="Appointment Scheduling Specialist",
-    goal="""Optimize appointment scheduling by finding available time slots, managing conflicts,
-    and coordinating follow-up appointments. Ensure efficient use of healthcare provider time.""",
-    backstory="""You are an expert in healthcare scheduling and resource optimization. You manage
-    doctor calendars, find optimal appointment slots, handle rescheduling, and ensure patients
-    receive timely care. You prioritize urgent cases and follow-up appointments while maintaining
-    efficient scheduling.""",
-    verbose=True,
-    allow_delegation=False,
-    tools=[check_doctor_availability]
-)
+# Scheduling Agent (only if crewai is available)
+scheduling_agent = None
+if CREWAI_AVAILABLE and Agent:
+    scheduling_agent = Agent(
+        role="Appointment Scheduling Specialist",
+        goal="""Optimize appointment scheduling by finding available time slots, managing conflicts,
+        and coordinating follow-up appointments. Ensure efficient use of healthcare provider time.""",
+        backstory="""You are an expert in healthcare scheduling and resource optimization. You manage
+        doctor calendars, find optimal appointment slots, handle rescheduling, and ensure patients
+        receive timely care. You prioritize urgent cases and follow-up appointments while maintaining
+        efficient scheduling.""",
+        verbose=True,
+        allow_delegation=False,
+        tools=[check_doctor_availability]
+    )
 
 
 def find_available_slots(doctor_id: int, preferred_date: str = None, days_ahead: int = 7) -> dict:
