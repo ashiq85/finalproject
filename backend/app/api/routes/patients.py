@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.db.base import get_db
 from app.db.models import Patient, User, UserRole, HealthMetric
@@ -152,7 +152,7 @@ async def list_patients(
             detail="Not authorized to view all patients"
         )
     
-    patients = db.query(Patient).offset(skip).limit(limit).all()
+    patients = db.query(Patient).options(joinedload(Patient.user)).offset(skip).limit(limit).all()
     return patients
 
 

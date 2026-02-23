@@ -19,7 +19,6 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: int
     is_active: bool
-    specialization: Optional[str] = None
     created_at: datetime
     
     class Config:

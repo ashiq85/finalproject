@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from app.db.base import get_db
 from app.db.models import User, UserRole, Patient
 from app.schemas import UserCreate, UserResponse, PatientResponse
 from app.api.routes.auth import get_current_user
 from app.core.security import get_password_hash
+import random, string
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -124,8 +125,70 @@ async def get_all_patients(
     admin: User = Depends(require_admin)
 ):
     """Get all patients in the system"""
-    patients = db.query(Patient).all()
+    patients = db.query(Patient).options(joinedload(Patient.user)).all()
     return patients
+
+
+@router.post("/patients", response_model=PatientResponse, status_code=status.HTTP_201_CREATED)
+async def admin_create_patient(
+    data: dict,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    """Admin endpoint to create a new patient account"""
+    email = data.get("email")
+    full_name = data.get("full_name")
+    password = data.get("password")
+
+    if not email or not full_name or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="email, full_name, and password are required"
+        )
+
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    # Create user
+    hashed_password = get_password_hash(password)
+    new_user = User(
+        email=email,
+        full_name=full_name,
+        role=UserRole.PATIENT,
+        hashed_password=hashed_password,
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    # Generate medical ID
+    while True:
+        digits = ''.join(random.choices(string.digits, k=5))
+        medical_id = f"AH-{digits}"
+        exists = db.query(Patient).filter(Patient.medical_id == medical_id).first()
+        if not exists:
+            break
+
+    # Create patient profile
+    patient = Patient(
+        user_id=new_user.id,
+        medical_id=medical_id,
+        gender=data.get("gender"),
+        blood_type=data.get("blood_type"),
+        phone=data.get("phone"),
+    )
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+
+    # Load with user relation
+    patient = db.query(Patient).options(joinedload(Patient.user)).filter(Patient.id == patient.id).first()
+    return patient
 
 
 @router.put("/patients/{patient_id}/deactivate")

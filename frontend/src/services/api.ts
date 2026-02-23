@@ -121,5 +121,6 @@ export const adminAPI = {
     deactivateDoctor: (id: number) => api.put(`/admin/doctors/${id}/deactivate`),
     activateDoctor: (id: number) => api.put(`/admin/doctors/${id}/activate`),
     getPatients: () => api.get('/admin/patients'),
+    createPatient: (data: any) => api.post('/admin/patients', data),
     getUsers: (role?: string) => api.get('/admin/users', { params: { role } }),
 };

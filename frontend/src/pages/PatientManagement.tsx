@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { patientsAPI } from '../services/api';
+import { patientsAPI, adminAPI } from '../services/api';
 import type { Patient } from '../types';
-import { Search, UserPlus, Info, Phone, Activity as ActivityIcon } from 'lucide-react';
+import { Search, UserPlus, Info, Phone, Activity as ActivityIcon, X } from 'lucide-react';
 
 const PatientManagement: React.FC = () => {
     const { user } = useAuth();
@@ -15,21 +15,38 @@ const PatientManagement: React.FC = () => {
     const [isLogging, setIsLogging] = useState(false);
     const [newMetric, setNewMetric] = useState({ metric_name: 'blood_sugar_before', value: '', unit: 'mg/dL' });
 
-    useEffect(() => {
-        loadPatients();
-    }, []);
+    // New Patient modal state
+    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [formError, setFormError] = useState('');
+    const [formSuccess, setFormSuccess] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [patientForm, setPatientForm] = useState({
+        full_name: '',
+        email: '',
+        password: '',
+        gender: '',
+        blood_type: '',
+        phone: '',
+    });
 
-    const loadPatients = async () => {
+    const loadPatients = useCallback(async () => {
         try {
             setIsLoading(true);
-            const response = await patientsAPI.getAll();
+            // Admins use the admin endpoint; doctors use the patients endpoint
+            const response = user?.role === 'admin'
+                ? await adminAPI.getPatients()
+                : await patientsAPI.getAll();
             setPatients(response.data);
         } catch (error) {
             console.error('Error loading patients:', error);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user?.role]);
+
+    useEffect(() => {
+        loadPatients();
+    }, [loadPatients]);
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,6 +61,23 @@ const PatientManagement: React.FC = () => {
         }
     };
 
+    const handleAddPatient = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setFormError('');
+        setFormSuccess('');
+        setIsSubmitting(true);
+        try {
+            await adminAPI.createPatient(patientForm);
+            setFormSuccess(`Patient ${patientForm.full_name} added successfully!`);
+            setPatientForm({ full_name: '', email: '', password: '', gender: '', blood_type: '', phone: '' });
+            await loadPatients();
+        } catch (err: any) {
+            setFormError(err?.response?.data?.detail || 'Failed to create patient.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (user?.role === 'patient') {
         return <div className="p-8 text-center text-gray-500">Access denied.</div>;
     }
@@ -52,10 +86,15 @@ const PatientManagement: React.FC = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">Patient Management</h2>
-                <button className="btn-primary flex items-center space-x-2">
-                    <UserPlus className="h-5 w-5" />
-                    <span>New Patient</span>
-                </button>
+                {user?.role === 'admin' && (
+                    <button
+                        className="btn-primary flex items-center space-x-2"
+                        onClick={() => { setIsAddOpen(true); setFormError(''); setFormSuccess(''); }}
+                    >
+                        <UserPlus className="h-5 w-5" />
+                        <span>New Patient</span>
+                    </button>
+                )}
             </div>
 
             {/* Search Bar */}
@@ -90,16 +129,20 @@ const PatientManagement: React.FC = () => {
                                     key={p.id}
                                     className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${selectedPatient?.id === p.id ? 'bg-primary-50' : ''
                                         }`}
-                                    onClick={() => setSelectedPatient(p)}
+                                    onClick={() => { setSelectedPatient(p); setActiveTab('info'); }}
                                 >
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center space-x-3">
                                             <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-bold text-primary-700">
-                                                {p.user?.full_name?.charAt(0) || 'P'}
+                                                {p.user?.full_name?.charAt(0) ?? 'P'}
                                             </div>
                                             <div className="overflow-hidden">
-                                                <p className="text-sm font-bold text-gray-900 truncate">{p.user?.full_name}</p>
-                                                <p className="text-[10px] text-gray-500 font-mono">{p.medical_id || 'NO ID'}</p>
+                                                <p className="text-sm font-bold text-gray-900 truncate">
+                                                    {p.user?.full_name ?? '—'}
+                                                </p>
+                                                <p className="text-[10px] text-gray-500 font-mono">
+                                                    {p.medical_id ?? 'NO ID'}
+                                                </p>
                                             </div>
                                         </div>
                                         <Info className="h-4 w-4 text-gray-300" />
@@ -117,12 +160,12 @@ const PatientManagement: React.FC = () => {
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center space-x-4">
                                     <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
-                                        {selectedPatient.user?.full_name?.charAt(0)}
+                                        {selectedPatient.user?.full_name?.charAt(0) ?? 'P'}
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-gray-900">{selectedPatient.user?.full_name}</h3>
+                                        <h3 className="text-xl font-bold text-gray-900">{selectedPatient.user?.full_name ?? '—'}</h3>
                                         <div className="flex items-center space-x-2 mt-1">
-                                            <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600">ID: {selectedPatient.medical_id || 'Pending'}</span>
+                                            <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600">ID: {selectedPatient.medical_id ?? 'Pending'}</span>
                                             <span className="text-xs text-gray-400">•</span>
                                             <span className="text-xs text-gray-500">{selectedPatient.user?.email}</span>
                                         </div>
@@ -139,7 +182,7 @@ const PatientManagement: React.FC = () => {
                                     className={`px-4 py-2 text-sm font-medium ${activeTab === 'info' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
                                     onClick={() => setActiveTab('info')}
                                 >
-                                    Personal & Medical Info
+                                    Personal &amp; Medical Info
                                 </button>
                                 <button
                                     className={`px-4 py-2 text-sm font-medium ${activeTab === 'metrics' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
@@ -151,7 +194,7 @@ const PatientManagement: React.FC = () => {
                                         } catch (e) { console.error(e); }
                                     }}
                                 >
-                                    Health Metrics & Trends
+                                    Health Metrics &amp; Trends
                                 </button>
                             </div>
 
@@ -163,9 +206,9 @@ const PatientManagement: React.FC = () => {
                                                 <Info className="h-5 w-5 mr-2" /> Personal Info
                                             </h4>
                                             <div className="bg-gray-50 p-4 rounded-md space-y-2 text-sm">
-                                                <p><span className="text-gray-500">Gender:</span> {selectedPatient.gender}</p>
-                                                <p><span className="text-gray-500">DOB:</span> {new Date(selectedPatient.date_of_birth).toLocaleDateString()}</p>
-                                                <p><span className="text-gray-500">Blood Type:</span> <span className="text-red-600 font-bold">{selectedPatient.blood_type}</span></p>
+                                                <p><span className="text-gray-500">Gender:</span> {selectedPatient.gender ?? '—'}</p>
+                                                <p><span className="text-gray-500">DOB:</span> {selectedPatient.date_of_birth ? new Date(selectedPatient.date_of_birth).toLocaleDateString() : '—'}</p>
+                                                <p><span className="text-gray-500">Blood Type:</span> <span className="text-red-600 font-bold">{selectedPatient.blood_type ?? '—'}</span></p>
                                             </div>
                                         </div>
 
@@ -174,13 +217,12 @@ const PatientManagement: React.FC = () => {
                                                 <Phone className="h-5 w-5 mr-2" /> Contact
                                             </h4>
                                             <div className="bg-gray-50 p-4 rounded-md space-y-2 text-sm">
-                                                <p><span className="text-gray-500">Emergency:</span> {selectedPatient.emergency_contact?.name}</p>
-                                                <p><span className="text-gray-500">Rel:</span> {selectedPatient.emergency_contact?.relationship}</p>
-                                                <p><span className="text-gray-500">Phone:</span> {selectedPatient.emergency_contact?.phone}</p>
+                                                <p><span className="text-gray-500">Emergency:</span> {selectedPatient.emergency_contact?.name ?? '—'}</p>
+                                                <p><span className="text-gray-500">Rel:</span> {selectedPatient.emergency_contact?.relationship ?? '—'}</p>
+                                                <p><span className="text-gray-500">Phone:</span> {selectedPatient.emergency_contact?.phone ?? '—'}</p>
                                             </div>
                                         </div>
                                     </div>
-
                                 </>
                             ) : (
                                 <div className="space-y-6">
@@ -271,6 +313,80 @@ const PatientManagement: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* New Patient Modal */}
+            {isAddOpen && (
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-gray-900">Create Patient Account</h3>
+                            <button onClick={() => setIsAddOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{formError}</div>}
+                        {formSuccess && <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">{formSuccess}</div>}
+
+                        <form onSubmit={handleAddPatient} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <input required className="input-field" placeholder="Jane Doe"
+                                    value={patientForm.full_name}
+                                    onChange={e => setPatientForm({ ...patientForm, full_name: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input required type="email" className="input-field" placeholder="patient@example.com"
+                                    value={patientForm.email}
+                                    onChange={e => setPatientForm({ ...patientForm, email: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Temporary Password</label>
+                                <input required type="password" className="input-field" placeholder="Min 8 characters"
+                                    value={patientForm.password}
+                                    onChange={e => setPatientForm({ ...patientForm, password: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                                    <select className="input-field" value={patientForm.gender}
+                                        onChange={e => setPatientForm({ ...patientForm, gender: e.target.value })}>
+                                        <option value="">Select</option>
+                                        <option>Male</option>
+                                        <option>Female</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Blood Type</label>
+                                    <select className="input-field" value={patientForm.blood_type}
+                                        onChange={e => setPatientForm({ ...patientForm, blood_type: e.target.value })}>
+                                        <option value="">Select</option>
+                                        <option>A+</option><option>A-</option>
+                                        <option>B+</option><option>B-</option>
+                                        <option>AB+</option><option>AB-</option>
+                                        <option>O+</option><option>O-</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone (optional)</label>
+                                <input type="tel" className="input-field" placeholder="+91 98765 43210"
+                                    value={patientForm.phone}
+                                    onChange={e => setPatientForm({ ...patientForm, phone: e.target.value })} />
+                            </div>
+                            <div className="flex justify-end space-x-3 pt-2">
+                                <button type="button" onClick={() => setIsAddOpen(false)} className="btn-secondary">Cancel</button>
+                                <button type="submit" disabled={isSubmitting} className="btn-primary disabled:opacity-60">
+                                    <UserPlus className="h-4 w-4 mr-2 inline" />
+                                    {isSubmitting ? 'Creating...' : 'Create Patient'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
