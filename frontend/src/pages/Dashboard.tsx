@@ -13,10 +13,11 @@ import {
     PlusCircle,
     Heart
 } from 'lucide-react';
-import { alertsAPI, appointmentsAPI } from '../services/api';
+import { alertsAPI, appointmentsAPI, adminAPI, patientsAPI } from '../services/api';
 import api from '../services/api';
 import type { Alert, Appointment } from '../types';
 import clsx from 'clsx';
+import { X } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
@@ -27,6 +28,14 @@ const Dashboard: React.FC = () => {
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [newMetric, setNewMetric] = useState({ metric_name: 'blood_sugar_before', value: '', unit: 'mg/dL', notes: '' });
     const [diagnosis, setDiagnosis] = useState<any>(null);
+
+    // Admin modals
+    const [isAddDoctorOpen, setIsAddDoctorOpen] = useState(false);
+    const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+    const [doctorForm, setDoctorForm] = useState({ full_name: '', email: '', password: '' });
+    const [patientForm, setPatientForm] = useState({ full_name: '', email: '', password: '', phone: '', gender: '', date_of_birth: '' });
+    const [formError, setFormError] = useState('');
+    const [formSuccess, setFormSuccess] = useState('');
 
     useEffect(() => {
         if (!user) return;
@@ -57,7 +66,36 @@ const Dashboard: React.FC = () => {
             }
         };
         loadData();
-    }, [user.role]);
+    }, [user?.role]);
+
+    const handleAddDoctor = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setFormError('');
+        setFormSuccess('');
+        try {
+            await adminAPI.createDoctor({ ...doctorForm, role: 'doctor' });
+            setFormSuccess(`Dr. ${doctorForm.full_name} has been added successfully!`);
+            setDoctorForm({ full_name: '', email: '', password: '' });
+        } catch (err: any) {
+            setFormError(err?.response?.data?.detail || 'Failed to create doctor.');
+        }
+    };
+
+    const handleAddPatient = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setFormError('');
+        setFormSuccess('');
+        try {
+            await patientsAPI.registerByDoctor(
+                { full_name: patientForm.full_name, email: patientForm.email, password: patientForm.password, role: 'patient' },
+                { phone: patientForm.phone, gender: patientForm.gender, date_of_birth: patientForm.date_of_birth || null }
+            );
+            setFormSuccess(`Patient ${patientForm.full_name} has been registered successfully!`);
+            setPatientForm({ full_name: '', email: '', password: '', phone: '', gender: '', date_of_birth: '' });
+        } catch (err: any) {
+            setFormError(err?.response?.data?.detail || 'Failed to register patient.');
+        }
+    };
 
     const handleLogMetric = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -104,12 +142,18 @@ const Dashboard: React.FC = () => {
                 </DashboardCard>
                 <DashboardCard title="Quick Actions" icon={PlusCircle}>
                     <div className="grid grid-cols-2 gap-3">
-                        <button className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <button
+                            onClick={() => { setIsAddDoctorOpen(true); setFormError(''); setFormSuccess(''); }}
+                            className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-primary-50 border border-transparent hover:border-primary-200 transition-all"
+                        >
                             <UserPlus className="h-6 w-6 text-primary-600 mb-2" />
                             <span className="text-sm font-medium">Add Doctor</span>
                         </button>
-                        <button className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <PlusCircle className="h-6 w-6 text-primary-600 mb-2" />
+                        <button
+                            onClick={() => { setIsAddPatientOpen(true); setFormError(''); setFormSuccess(''); }}
+                            className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-green-50 border border-transparent hover:border-green-200 transition-all"
+                        >
+                            <PlusCircle className="h-6 w-6 text-green-600 mb-2" />
                             <span className="text-sm font-medium">Add Patient</span>
                         </button>
                     </div>
@@ -330,6 +374,98 @@ const Dashboard: React.FC = () => {
             {user.role === 'admin' && renderAdminDashboard()}
             {user.role === 'doctor' && renderDoctorDashboard()}
             {user.role === 'patient' && renderPatientDashboard()}
+
+            {/* Add Doctor Modal */}
+            {isAddDoctorOpen && (
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-gray-900">Create Doctor Account</h3>
+                            <button onClick={() => setIsAddDoctorOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="h-6 w-6" /></button>
+                        </div>
+                        {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">{formError}</div>}
+                        {formSuccess && <div className="mb-4 p-3 bg-green-50 text-green-700 rounded text-sm">{formSuccess}</div>}
+                        <form onSubmit={handleAddDoctor} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <input required className="input-field" placeholder="Dr. John Smith" value={doctorForm.full_name}
+                                    onChange={e => setDoctorForm({ ...doctorForm, full_name: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input required type="email" className="input-field" placeholder="doctor@hospital.com" value={doctorForm.email}
+                                    onChange={e => setDoctorForm({ ...doctorForm, email: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Temporary Password</label>
+                                <input required type="password" className="input-field" placeholder="Min 8 characters" value={doctorForm.password}
+                                    onChange={e => setDoctorForm({ ...doctorForm, password: e.target.value })} />
+                            </div>
+                            <div className="flex justify-end space-x-3 pt-4">
+                                <button type="button" onClick={() => setIsAddDoctorOpen(false)} className="btn-secondary">Close</button>
+                                <button type="submit" className="btn-primary"><UserPlus className="h-4 w-4 mr-2 inline" />Create Doctor</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Patient Modal */}
+            {isAddPatientOpen && (
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-gray-900">Register New Patient</h3>
+                            <button onClick={() => setIsAddPatientOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="h-6 w-6" /></button>
+                        </div>
+                        {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">{formError}</div>}
+                        {formSuccess && <div className="mb-4 p-3 bg-green-50 text-green-700 rounded text-sm">{formSuccess}</div>}
+                        <form onSubmit={handleAddPatient} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                    <input required className="input-field" placeholder="Jane Doe" value={patientForm.full_name}
+                                        onChange={e => setPatientForm({ ...patientForm, full_name: e.target.value })} />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input required type="email" className="input-field" placeholder="patient@email.com" value={patientForm.email}
+                                        onChange={e => setPatientForm({ ...patientForm, email: e.target.value })} />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Temporary Password</label>
+                                    <input required type="password" className="input-field" placeholder="Min 8 characters" value={patientForm.password}
+                                        onChange={e => setPatientForm({ ...patientForm, password: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                    <input className="input-field" placeholder="+91 98765 43210" value={patientForm.phone}
+                                        onChange={e => setPatientForm({ ...patientForm, phone: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                                    <select className="input-field" value={patientForm.gender}
+                                        onChange={e => setPatientForm({ ...patientForm, gender: e.target.value })}>
+                                        <option value="">Select</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                                    <input type="date" className="input-field" value={patientForm.date_of_birth}
+                                        onChange={e => setPatientForm({ ...patientForm, date_of_birth: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="flex justify-end space-x-3 pt-4">
+                                <button type="button" onClick={() => setIsAddPatientOpen(false)} className="btn-secondary">Close</button>
+                                <button type="submit" className="btn-primary"><PlusCircle className="h-4 w-4 mr-2 inline" />Register Patient</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Log Health Data Modal */}
             {isLogModalOpen && (
