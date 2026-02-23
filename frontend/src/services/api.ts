@@ -61,6 +61,7 @@ export const appointmentsAPI = {
     create: (data: any) => api.post<Appointment>('/appointments/', data),
     update: (id: number, data: any) => api.put<Appointment>(`/appointments/${id}`, data),
     cancel: (id: number) => api.delete(`/appointments/${id}`),
+    getDoctors: () => api.get<any[]>('/appointments/doctors'),
     requestReschedule: (id: number, requested_new_date: string) =>
         api.post<Appointment>(`/appointments/${id}/request-reschedule`, { requested_new_date }),
     approveReschedule: (id: number) =>

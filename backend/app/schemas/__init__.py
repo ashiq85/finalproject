@@ -87,6 +87,25 @@ class HealthMetricResponse(HealthMetricCreate):
 
 
 # Appointment Schemas
+class UserBasic(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    role: UserRole
+
+    class Config:
+        from_attributes = True
+
+
+class PatientBasic(BaseModel):
+    id: int
+    user_id: int
+    user: Optional[UserBasic] = None
+
+    class Config:
+        from_attributes = True
+
+
 class AppointmentBase(BaseModel):
     appointment_date: datetime
     duration_minutes: int = 30
@@ -118,7 +137,9 @@ class AppointmentResponse(AppointmentBase):
     requested_new_date: Optional[datetime] = None
     is_follow_up: bool
     created_at: datetime
-    
+    doctor: Optional[UserBasic] = None
+    patient: Optional[PatientBasic] = None
+
     class Config:
         from_attributes = True
 

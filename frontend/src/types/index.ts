@@ -49,11 +49,12 @@ export interface HealthMetric {
 }
 
 export const AppointmentStatus = {
-    SCHEDULED: 'SCHEDULED',
-    COMPLETED: 'COMPLETED',
-    CANCELLED: 'CANCELLED',
-    NO_SHOW: 'NO_SHOW',
-    RESCHEDULE_REQUESTED: 'RESCHEDULE_REQUESTED'
+    SCHEDULED: 'scheduled',
+    CONFIRMED: 'confirmed',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
+    NO_SHOW: 'no_show',
+    RESCHEDULE_REQUESTED: 'reschedule_requested'
 } as const;
 export type AppointmentStatus = typeof AppointmentStatus[keyof typeof AppointmentStatus];
 

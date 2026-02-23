@@ -27,7 +27,7 @@ def init_db():
             )
             db.add(admin_user)
             db.commit()
-            print("✅ Default admin user created: admin@agenthealth.com / admin123")
+            print("[OK] Default admin user created: admin@agenthealth.com / admin123")
         
         # Create default doctor
         doctor = db.query(User).filter(User.email == "doctor@agenthealth.com").first()
@@ -41,7 +41,7 @@ def init_db():
             )
             db.add(doctor_user)
             db.commit()
-            print("✅ Default doctor user created: doctor@agenthealth.com / doctor123")
+            print("[OK] Default doctor user created: doctor@agenthealth.com / doctor123")
             
         # Create default patient
         patient = db.query(User).filter(User.email == "patient@agenthealth.com").first()
@@ -61,7 +61,7 @@ def init_db():
             patient_profile = Patient(user_id=patient_user.id)
             db.add(patient_profile)
             db.commit()
-            print("✅ Default patient user created: patient@agenthealth.com / patient123")
+            print("[OK] Default patient user created: patient@agenthealth.com / patient123")
             
     finally:
         db.close()
