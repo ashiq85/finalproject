@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.db
+*.sqlite3
+crewai_env/
+.venv/
+venv/
+chroma_data/
+
+# Node / frontend
+node_modules/
+dist/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets
+*.env
